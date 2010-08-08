@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 					   
+					   xmlns:views="com.chaostomorrow.taproom.views.*"
+					   preinitialize="preInitHandler()" >
+	<fx:Script>
+		<![CDATA[
+			import com.chaostomorrow.taproom.contexts.TaproomContext;
+			
+			protected var taproomContext:TaproomContext;
+			
+			protected function preInitHandler():void {
+				taproomContext = new TaproomContext(this);
+			}
+		]]>
+	</fx:Script>
+	<views:FormulaeListView id="listView" width="100%" height="100%"/>
+</s:WindowedApplication>
