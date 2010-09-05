@@ -9,14 +9,6 @@
 	<fx:Script>
 		<![CDATA[
 			import com.chaostomorrow.taproom.views.events.FormulaSearchEvent;
-			
-			import spark.events.TextOperationEvent;
-			
-			protected function inputKeyDownHandler(event:KeyboardEvent):void {
-				if(event.keyCode == Keyboard.ENTER){
-					search();
-				}
-			}
 
 			protected function search():void {
 				dispatchEvent(new FormulaSearchEvent(input.text));
@@ -24,5 +16,5 @@
 
 		]]>
 	</fx:Script>
-	<s:TextInput id="input" width="100%" height="100%" keyDown="inputKeyDownHandler(event)"/>
+	<s:TextInput id="input" width="100%" height="100%" change="search()" enter="search()"/>
 </s:Group>

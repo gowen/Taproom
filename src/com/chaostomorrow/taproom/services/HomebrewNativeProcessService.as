@@ -19,13 +19,12 @@ package com.chaostomorrow.taproom.services
 	{
 		// TODO: queue requests or don't share a single native process for all calls
 		
-		protected var brewProcess:NativeProcess;
+		protected var searchProcess:NativeProcess;
 		public static const brewLocation:String = "/usr/local/bin/brew"; // TODO: this should not be hardcoded
 		
 		public function HomebrewNativeProcessService()
 		{
-			// TODO: get the location of brew. Could inject the native process here, or at least the name
-			brewProcess = new NativeProcess();
+			// TODO: get the location of brew. Could inject the native process here, or at least the name			
 		}
 		
 		/**
@@ -39,25 +38,28 @@ package com.chaostomorrow.taproom.services
 		
 		public function loadFormulaList():void {
 			list = "";
+			var process:NativeProcess = new NativeProcess();
 			
-			brewProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.addEventListener(NativeProcessExitEvent.EXIT, loadFormulaeExitHandler);
+			process.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			process.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			process.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			process.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			process.addEventListener(NativeProcessExitEvent.EXIT, loadFormulaeExitHandler);
 			var info:NativeProcessStartupInfo = new NativeProcessStartupInfo();
 			info.executable = new File(brewLocation);
 			info.arguments = new <String>[ 'list', '-v' ];
-			brewProcess.start(info);
+			process.start(info);
 		}
 		
 		protected function listSTDIOHandler(event:ProgressEvent):void {
-			list += brewProcess.standardOutput.readUTFBytes(brewProcess.standardOutput.bytesAvailable);
+			var process:NativeProcess = event.target as NativeProcess;
+			list += process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
 		}
 		
 		protected function listSTDERRHandler(event:ProgressEvent):void {
 			// TDOO: what could come on std error for the list call?
-			trace('std err: ' + brewProcess.standardError.readUTFBytes(brewProcess.standardOutput.bytesAvailable));
+			var process:NativeProcess = event.target as NativeProcess;
+			trace('std err: ' + process.standardError.readUTFBytes(process.standardOutput.bytesAvailable));
 		}
 		
 		protected function loadFormulaeExitHandler(event:NativeProcessExitEvent):void {
@@ -77,31 +79,36 @@ package com.chaostomorrow.taproom.services
 			var formulaList:FormulaList = new FormulaList();
 			formulaList.formulae = new ArrayCollection(formulae);
 			
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(NativeProcessExitEvent.EXIT, loadFormulaeExitHandler);
-			
 			dispatch(new HomebrewEvent(HomebrewEvent.FORMULA_LIST_LOADED, formulaList));
 		}
 		
 		// TODO: add regex param
 		public function search(formula:String):void {
-			// TODO: is there any reason to check the existing list? The returned list is going to have everything anyway. Could give some results faster, but replace when the call returns
-			// check the existing list of formulae for any matches (not regex due to special characters, instead do 'indexOf') TODO: need a model class
-			// call brew search
-			list = "";
+			// if there is already a call running, cancel it
+			if(searchProcess && searchProcess.running){
+				searchProcess.exit(true);
+				searchProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+				searchProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+				searchProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+				searchProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+				searchProcess.removeEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+				searchProcess = null;
+			}
 			
-			brewProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.addEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+			// call brew search
+			
+			list = "";
+			searchProcess = new NativeProcess();
+			
+			searchProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			searchProcess.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			searchProcess.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			searchProcess.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			searchProcess.addEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
 			var info:NativeProcessStartupInfo = new NativeProcessStartupInfo();
 			info.executable = new File(brewLocation);
 			info.arguments = new <String>[ 'search', formula];
-			brewProcess.start(info);
+			searchProcess.start(info);
 		}
 		
 		protected function searchExitHandler(event:NativeProcessExitEvent):void {
@@ -121,27 +128,28 @@ package com.chaostomorrow.taproom.services
 			var formulaList:FormulaList = new FormulaList();
 			formulaList.formulae = new ArrayCollection(formulae);
 						
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+			searchProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			searchProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			searchProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			searchProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			searchProcess.removeEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+			searchProcess = null;
 			
 			dispatch(new HomebrewEvent(HomebrewEvent.FORMULA_LIST_LOADED, formulaList));
 		}
 		
 		public function findOutdatedFormulae():void {
 			list = "";
-			
-			brewProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.addEventListener(NativeProcessExitEvent.EXIT, findOutdatedFormulaeExitHandler);
+			var process:NativeProcess = new NativeProcess();
+			process.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			process.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			process.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			process.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			process.addEventListener(NativeProcessExitEvent.EXIT, findOutdatedFormulaeExitHandler);
 			var info:NativeProcessStartupInfo = new NativeProcessStartupInfo();
 			info.executable = new File(brewLocation);
 			info.arguments = new <String>[ 'outdated', '-v'];
-			brewProcess.start(info);
+			process.start(info);
 		}
 		
 		protected function findOutdatedFormulaeExitHandler(event:NativeProcessExitEvent):void {
@@ -160,12 +168,6 @@ package com.chaostomorrow.taproom.services
 			
 			var formulaList:FormulaList = new FormulaList();
 			formulaList.formulae = new ArrayCollection(formulae);
-			
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
-			brewProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
-			brewProcess.removeEventListener(NativeProcessExitEvent.EXIT, findOutdatedFormulaeExitHandler);
 			
 			dispatch(new HomebrewEvent(HomebrewEvent.OUTDATED_LIST_LOADED, formulaList));
 		}
