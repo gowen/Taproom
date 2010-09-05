@@ -2,7 +2,7 @@ package com.chaostomorrow.taproom.views.mediators
 {
 	import com.chaostomorrow.taproom.events.HomebrewEvent;
 	import com.chaostomorrow.taproom.models.vo.BrewFormula;
-	import com.chaostomorrow.taproom.views.FormulaeListView;
+	import com.chaostomorrow.taproom.views.components.FormulaeListView;
 	
 	import flash.events.Event;
 	
@@ -48,8 +48,8 @@ package com.chaostomorrow.taproom.views.mediators
 				// if there is a match then update the view's copy to have the outdated flag and new version
 				for(var i:int = 0; i < eventList.length && !found; i++){
 					var outdated:BrewFormula = eventList[i] as BrewFormula;
-					if(!outdated) break;
-					if(outdated.name == formula.name){
+
+					if(outdated && outdated.name == formula.name){
 						formula.outdated = true;
 						formula.name += '*';
 						found = true;

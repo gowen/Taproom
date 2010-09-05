@@ -22,7 +22,7 @@
 			<mx:DataGridColumn dataField="version" width="150"/>
 		</mx:columns>
 	</mx:DataGrid>
-	<s:SkinnableContainer visible="{loading}" backgroundColor="0xFFFFFF" backgroundAlpha=".4">
+	<s:SkinnableContainer visible="{loading}" backgroundColor="0xFFFFFF" backgroundAlpha=".4" width="100%" height="100%">
 		<s:Label text="Loading..." horizontalCenter="0" verticalCenter="0"/>
 	</s:SkinnableContainer>
 </s:Group>

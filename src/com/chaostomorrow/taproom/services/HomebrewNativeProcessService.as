@@ -86,9 +86,48 @@ package com.chaostomorrow.taproom.services
 			dispatch(new HomebrewEvent(HomebrewEvent.FORMULA_LIST_LOADED, formulaList));
 		}
 		
+		// TODO: add regex param
 		public function search(formula:String):void {
+			// TODO: is there any reason to check the existing list? The returned list is going to have everything anyway. Could give some results faster, but replace when the call returns
 			// check the existing list of formulae for any matches (not regex due to special characters, instead do 'indexOf') TODO: need a model class
 			// call brew search
+			list = "";
+			
+			brewProcess.addEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			brewProcess.addEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			brewProcess.addEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			brewProcess.addEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			brewProcess.addEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+			var info:NativeProcessStartupInfo = new NativeProcessStartupInfo();
+			info.executable = new File(brewLocation);
+			info.arguments = new <String>[ 'search', formula];
+			brewProcess.start(info);
+		}
+		
+		protected function searchExitHandler(event:NativeProcessExitEvent):void {
+			// search process is done
+			
+			// parse the list into formula objects
+			var formulaeStrings:Array = list.split('\n');
+			var formulae:Array = [];
+			for each(var formulaString:String in formulaeStrings){
+				var nameAndVersions:Array = formulaString.split(' ');
+				var formula:BrewFormula = new BrewFormula(nameAndVersions[0], "");
+				if(formula.name){
+					formulae.push(formula);
+				}
+			}
+			
+			var formulaList:FormulaList = new FormulaList();
+			formulaList.formulae = new ArrayCollection(formulae);
+						
+			brewProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			brewProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			brewProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			brewProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			brewProcess.removeEventListener(NativeProcessExitEvent.EXIT, searchExitHandler);
+			
+			dispatch(new HomebrewEvent(HomebrewEvent.FORMULA_LIST_LOADED, formulaList));
 		}
 		
 		public function findOutdatedFormulae():void {
@@ -121,6 +160,12 @@ package com.chaostomorrow.taproom.services
 			
 			var formulaList:FormulaList = new FormulaList();
 			formulaList.formulae = new ArrayCollection(formulae);
+			
+			brewProcess.removeEventListener(ProgressEvent.STANDARD_OUTPUT_DATA, listSTDIOHandler);
+			brewProcess.removeEventListener(ProgressEvent.STANDARD_ERROR_DATA, listSTDERRHandler);
+			brewProcess.removeEventListener(IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, onIOError);
+			brewProcess.removeEventListener(IOErrorEvent.STANDARD_ERROR_IO_ERROR, onIOError);
+			brewProcess.removeEventListener(NativeProcessExitEvent.EXIT, findOutdatedFormulaeExitHandler);
 			
 			dispatch(new HomebrewEvent(HomebrewEvent.OUTDATED_LIST_LOADED, formulaList));
 		}
